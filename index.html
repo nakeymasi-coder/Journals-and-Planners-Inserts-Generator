@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planner and Journal Inserts Generator</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --bg2:#111831;
+      --card:rgba(255,255,255,.08);
+      --card-2:rgba(255,255,255,.12);
+      --text:#f8f9ff;
+      --muted:#b8bfdc;
+      --gold:#f59e0b;
+      --blue:#4f46e5;
+      --line:rgba(255,255,255,.12);
+      --success:#32d296;
+      --shadow:0 18px 50px rgba(0,0,0,.35);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(79,70,229,.24), transparent 28%),
+        radial-gradient(circle at top right, rgba(245,158,11,.14), transparent 22%),
+        linear-gradient(180deg, #0a0f1d 0%, #10162d 48%, #0b1020 100%);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .container{width:min(1380px,calc(100% - 28px));margin:0 auto}
+    .hidden{display:none!important}
+    .topbar{
+      position:sticky;top:0;z-index:30;
+      backdrop-filter:blur(12px);
+      background:rgba(10,15,29,.72);
+      border-bottom:1px solid var(--line);
+    }
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.2px}
+    .brand-badge{
+      width:42px;height:42px;border-radius:14px;
+      display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--blue),#766dff 58%, var(--gold));
+      box-shadow:0 10px 24px rgba(79,70,229,.35);
+      font-size:20px;
+    }
+    .nav-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{
+      appearance:none;border:none;cursor:pointer;
+      padding:12px 16px;border-radius:14px;
+      font-weight:700;color:var(--text);
+      background:linear-gradient(135deg,var(--blue),#665df2);
+      box-shadow:0 10px 22px rgba(79,70,229,.28);
+      transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease, background .2s ease;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(79,70,229,.36)}
+    .btn:active{transform:translateY(0)}
+    .btn.secondary{background:rgba(255,255,255,.08);box-shadow:none;border:1px solid var(--line)}
+    .btn.gold{background:linear-gradient(135deg,#c98507,var(--gold));box-shadow:0 10px 22px rgba(245,158,11,.24)}
+    .btn.success{background:linear-gradient(135deg,#1d9d6f,var(--success));box-shadow:0 10px 22px rgba(50,210,150,.2)}
+    .hero{padding:34px 0 22px}
+    .hero-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:22px;align-items:stretch}
+    .hero-card,.panel,.output-card,.mode-card,.preset-card,.inspire-card,.start-card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
+    }
+    .hero-card{padding:30px}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(245,158,11,.12);color:#ffd27b;border:1px solid rgba(245,158,11,.18);font-size:.88rem;font-weight:700;margin-bottom:14px}
+    h1,h2,h3{margin:0 0 10px}
+    h1{font-size:clamp(2rem,4vw,3.6rem);line-height:1.02}
+    p{color:var(--muted);line-height:1.6}
+    .hero-actions,.section-actions,.output-actions,.mini-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .pill-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .pill{padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line);color:#edf0ff;font-size:.92rem}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;height:100%}
+    .stat{padding:20px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.05));border:1px solid var(--line)}
+    .stat strong{display:block;font-size:1.9rem;margin-bottom:6px}
+    .section{padding:18px 0}
+    .section-header{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:14px}
+    .section-header p{margin:0}
+    .modes{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    .mode-card,.start-card{padding:20px;position:relative;overflow:hidden}
+    .mode-card::after,.preset-card::after,.inspire-card::after,.start-card::after{
+      content:"";position:absolute;inset:auto -40px -40px auto;width:120px;height:120px;border-radius:50%;
+      background:radial-gradient(circle, rgba(245,158,11,.22), transparent 65%);
+      pointer-events:none;
+    }
+    .mode-card h3,.preset-card h3,.inspire-card h3,.start-card h3{margin-bottom:8px}
+    .start-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .cards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+    .preset-card,.inspire-card{padding:18px}
+    .tag{display:inline-block;margin:6px 6px 0 0;padding:6px 10px;border-radius:999px;background:rgba(79,70,229,.18);border:1px solid rgba(79,70,229,.28);font-size:.8rem;color:#d8d5ff}
+    .workspace{display:grid;grid-template-columns:1.12fr .88fr;gap:20px;align-items:start}
+    .panel{padding:20px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+    .builder-sections{display:grid;gap:14px}
+    details.builder-group{
+      border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.04);overflow:hidden;
+      transition:background .2s ease,border-color .2s ease, transform .2s ease;
+    }
+    details.builder-group[open]{background:rgba(255,255,255,.06);border-color:rgba(245,158,11,.28)}
+    details.builder-group summary{
+      list-style:none;cursor:pointer;padding:16px 18px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:14px;
+    }
+    details.builder-group summary::-webkit-details-marker{display:none}
+    .group-body{padding:0 18px 18px}
+    .field-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .field{display:flex;flex-direction:column;gap:8px}
+    .field.full{grid-column:1/-1}
+    label{font-size:.92rem;font-weight:700;color:#eef1ff}
+    input[type="text"], textarea, select{
+      width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(11,16,32,.92);color:var(--text);outline:none;
+      transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus{border-color:rgba(245,158,11,.45);box-shadow:0 0 0 4px rgba(245,158,11,.1)}
+    select[multiple]{min-height:176px;padding-block:10px}
+    small.help{color:#9ca6cf;line-height:1.45}
+    textarea{min-height:120px;resize:vertical}
+    .output-card{padding:22px;position:sticky;top:84px}
+    .preview-box,.output-box{
+      white-space:pre-wrap;background:rgba(6,10,22,.92);border:1px solid var(--line);border-radius:18px;padding:16px;line-height:1.62;color:#edf1ff
+    }
+    .preview-box{min-height:260px;max-height:440px;overflow:auto}
+    .output-box{min-height:350px;margin-top:14px;max-height:560px;overflow:auto}
+    .note-line{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(50,210,150,.08);border:1px solid rgba(50,210,150,.18);color:#dffdef}
+    .footer-space{height:40px}
+    .muted{color:var(--muted)}
+    .tiny{font-size:.85rem}
+    .divider{height:1px;background:var(--line);margin:16px 0}
+    .tab-strip{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 18px}
+    .tab{padding:10px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer;font-weight:700;color:#edf0ff}
+    .tab.active{background:rgba(79,70,229,.22);border-color:rgba(79,70,229,.4)}
+    .home-anchor{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff}
+    @media (max-width:1200px){
+      .cards-grid{grid-template-columns:repeat(3,1fr)}
+      .modes{grid-template-columns:repeat(2,1fr)}
+      .workspace,.hero-grid{grid-template-columns:1fr}
+      .output-card{position:static}
+    }
+    @media (max-width:760px){
+      .container{width:min(100% - 18px,1380px)}
+      .cards-grid,.start-grid,.modes,.stats,.field-grid{grid-template-columns:1fr}
+      .hero-card,.panel,.output-card{padding:18px}
+      .topbar-inner{align-items:flex-start;flex-direction:column}
+      .btn{width:100%}
+      .nav-actions,.hero-actions,.section-actions,.output-actions,.toolbar{width:100%}
+      .nav-actions .btn,.hero-actions .btn,.section-actions .btn,.output-actions .btn,.toolbar .btn{flex:1 1 100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <div class="brand-badge">✦</div>
+        <div>
+          <div>Planner and Journal Inserts Generator</div>
+          <div class="tiny muted">Single-file interactive builder for printable insert ideas and AI-ready prompts</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button class="btn secondary" id="goStartTop">Start Screen</button>
+        <button class="btn secondary" id="goBuilderTop">Builder</button>
+        <button class="btn secondary" id="goOutputTop">Output</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="hero" id="home">
+      <div class="hero-grid">
+        <div class="hero-card">
+          <div class="eyebrow">✨ Build custom inserts, prompts, bundles, and listing copy</div>
+          <h1>Create planner and journal insert ideas that are clean, useful, and ready to sell.</h1>
+          <p>Use quick start, presets, inspiration cards, or the full custom builder. Mix planner sections with journal sections, faith features, finance trackers, content planning blocks, and decorative style details on one page.</p>
+          <div class="pill-list">
+            <span class="pill">30+ options in every dropdown</span>
+            <span class="pill">15 presets</span>
+            <span class="pill">Live preview</span>
+            <span class="pill">Multi-select categories</span>
+            <span class="pill">Copy + download output</span>
+          </div>
+          <div class="hero-actions">
+            <button class="btn gold" id="launchBuilder">Open Generator</button>
+            <button class="btn secondary" id="jumpPresets">View Presets</button>
+            <button class="btn secondary" id="jumpInspiration">Get Inspired</button>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <strong>30</strong>
+            <span class="muted">main builder categories ready to mix together</span>
+          </div>
+          <div class="stat">
+            <strong>8</strong>
+            <span class="muted">result blocks generated from every setup</span>
+          </div>
+          <div class="stat">
+            <strong>∞</strong>
+            <span class="muted">combinations for printable inserts, bundles, and shop copy</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="startScreen">
+      <div class="section-header">
+        <div>
+          <h2>Start screen</h2>
+          <p>Pick a path and move fast.</p>
+        </div>
+      </div>
+      <div class="start-grid">
+        <div class="start-card">
+          <h3>Quick Start</h3>
+          <p>Load a polished ready-made setup, then tweak it in the builder.</p>
+          <div class="section-actions"><button class="btn" id="startQuick">Use Quick Start</button></div>
+        </div>
+        <div class="start-card">
+          <h3>Custom Builder Mode</h3>
+          <p>Choose the page size, sections, style, and AI prompt details yourself.</p>
+          <div class="section-actions"><button class="btn" id="startCustom">Open Custom Builder</button></div>
+        </div>
+        <div class="start-card">
+          <h3>Preset + Inspiration Mode</h3>
+          <p>Browse preset cards and inspiration cards to spark fresh insert ideas.</p>
+          <div class="section-actions"><button class="btn" id="startPresetMode">Browse Ideas</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Modes</h2>
+          <p>Switch between fast setup and detailed control.</p>
+        </div>
+      </div>
+      <div class="modes">
+        <div class="mode-card"><h3>Quick Start</h3><p>Loads a strong balanced insert in one click.</p></div>
+        <div class="mode-card"><h3>Custom Builder</h3><p>Use the section-by-section form to build your own combo.</p></div>
+        <div class="mode-card"><h3>Preset Mode</h3><p>Tap a preset card to fill the form automatically.</p></div>
+        <div class="mode-card"><h3>Inspiration Mode</h3><p>Use idea cards to set the vibe before generating output.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="presetSection">
+      <div class="section-header">
+        <div>
+          <h2>Preset cards</h2>
+          <p>Use one, then customize the rest. All cards fill the form automatically.</p>
+        </div>
+      </div>
+      <div class="cards-grid" id="presetCards"></div>
+    </section>
+
+    <section class="section" id="inspirationSection">
+      <div class="section-header">
+        <div>
+          <h2>Inspiration cards</h2>
+          <p>Click a theme and it will add a helpful direction into your setup notes.</p>
+        </div>
+      </div>
+      <div class="cards-grid" id="inspirationCards"></div>
+    </section>
+
+    <section class="section" id="builder">
+      <div class="workspace">
+        <div class="panel">
+          <div class="section-header">
+            <div>
+              <h2>Setup form</h2>
+              <p>Build section by section. Multi-select fields let users combine several blocks on one insert.</p>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn gold" id="quickStartFill">Quick Start Fill</button>
+            <button class="btn secondary" id="randomizeBtn">Randomize</button>
+            <button class="btn secondary" id="clearBtn">Clear All</button>
+            <button class="btn success" id="generateBtn">Generate Output</button>
+          </div>
+
+          <div class="tab-strip">
+            <button class="tab active" data-open="coreGroup">Core Setup</button>
+            <button class="tab" data-open="structureGroup">Structure</button>
+            <button class="tab" data-open="contentGroup">Content Blocks</button>
+            <button class="tab" data-open="styleGroup">Style</button>
+            <button class="tab" data-open="featuresGroup">Feature Sets</button>
+            <button class="tab" data-open="notesGroup">Notes</button>
+          </div>
+
+          <div class="builder-sections" id="builderSections">
+            <details class="builder-group" id="coreGroup" open>
+              <summary><span>1. Core Setup</span><span class="muted">Insert type, audience, theme, use case</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="coreFields"></div>
+              </div>
+            </details>
+
+            <details class="builder-group" id="structureGroup">
+              <summary><span>2. Page Structure</span><span class="muted">Size, orientation, layout, binding, paper</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="structureFields"></div>
+              </div>
+            </details>
+
+            <details class="builder-group" id="contentGroup">
+              <summary><span>3. Content Blocks</span><span class="muted">Sections, header, footer, trackers, planner, journal</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="contentFields"></div>
+              </div>
+            </details>
+
+            <details class="builder-group" id="styleGroup">
+              <summary><span>4. Style Direction</span><span class="muted">Decor, fonts, color, borders, lines, icons</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="styleFields"></div>
+              </div>
+            </details>
+
+            <details class="builder-group" id="featuresGroup">
+              <summary><span>5. Feature Sets</span><span class="muted">Productivity, wellness, faith, business, finance, extras</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="featureFields"></div>
+              </div>
+            </details>
+
+            <details class="builder-group" id="notesGroup">
+              <summary><span>6. Notes and Custom Details</span><span class="muted">Titles, personalization, notes, keywords</span></summary>
+              <div class="group-body">
+                <div class="field-grid" id="notesFields"></div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <aside class="output-card" id="outputSection">
+          <h2>Live output preview</h2>
+          <p class="muted">This updates as you build. Hit generate when you want the full expanded result block.</p>
+          <div class="preview-box" id="livePreview"></div>
+          <div class="output-actions">
+            <button class="btn success" id="copyBtn">Copy Output</button>
+            <button class="btn secondary" id="downloadBtn">Download Output as Text</button>
+            <button class="btn secondary" id="returnHomeBtn">Return Home</button>
+          </div>
+          <div class="note-line" id="statusLine">Ready.</div>
+          <div class="divider"></div>
+          <h3>Generated output</h3>
+          <div class="output-box" id="finalOutput"></div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="footer-space"></div>
+  </main>
+
+  <script>
+    const FIELD_DEFS = [
+      {id:'insertTitle', label:'Insert Title', type:'text', group:'notesFields', placeholder:'Type a custom insert title'},
+      {id:'insertType', label:'Insert Type', type:'single', group:'coreFields', data:'insertType'},
+      {id:'audience', label:'Audience', type:'single', group:'coreFields', data:'audience'},
+      {id:'theme', label:'Theme', type:'single', group:'coreFields', data:'theme'},
+      {id:'useCase', label:'Use Case', type:'single', group:'coreFields', data:'useCase'},
+      {id:'pageSize', label:'Page Size', type:'single', group:'structureFields', data:'pageSize'},
+      {id:'orientation', label:'Orientation', type:'single', group:'structureFields', data:'orientation'},
+      {id:'layoutStyle', label:'Layout Style', type:'single', group:'structureFields', data:'layoutStyle'},
+      {id:'insertSections', label:'Insert Sections', type:'multi', group:'contentFields', data:'insertSections'},
+      {id:'headerElements', label:'Header Elements', type:'multi', group:'contentFields', data:'headerElements'},
+      {id:'footerElements', label:'Footer Elements', type:'multi', group:'contentFields', data:'footerElements'},
+      {id:'trackerElements', label:'Tracker Elements', type:'multi', group:'contentFields', data:'trackerElements'},
+      {id:'journalElements', label:'Journal Elements', type:'multi', group:'contentFields', data:'journalElements'},
+      {id:'plannerElements', label:'Planner Elements', type:'multi', group:'contentFields', data:'plannerElements'},
+      {id:'decorativeStyle', label:'Decorative Style', type:'single', group:'styleFields', data:'decorativeStyle'},
+      {id:'fontStyle', label:'Font Style', type:'single', group:'styleFields', data:'fontStyle'},
+      {id:'colorPalette', label:'Color Palette', type:'single', group:'styleFields', data:'colorPalette'},
+      {id:'borderStyle', label:'Border Style', type:'single', group:'styleFields', data:'borderStyle'},
+      {id:'lineStyle', label:'Line Style', type:'single', group:'styleFields', data:'lineStyle'},
+      {id:'iconStyle', label:'Icon Style', type:'single', group:'styleFields', data:'iconStyle'},
+      {id:'bindingStyle', label:'Binding Style', type:'single', group:'structureFields', data:'bindingStyle'},
+      {id:'paperStyle', label:'Paper Style', type:'single', group:'structureFields', data:'paperStyle'},
+      {id:'productivityFeatures', label:'Productivity Features', type:'multi', group:'featureFields', data:'productivityFeatures'},
+      {id:'wellnessFeatures', label:'Wellness Features', type:'multi', group:'featureFields', data:'wellnessFeatures'},
+      {id:'faithFeatures', label:'Faith-Based Features', type:'multi', group:'featureFields', data:'faithFeatures'},
+      {id:'businessFeatures', label:'Business / Content Features', type:'multi', group:'featureFields', data:'businessFeatures'},
+      {id:'financeFeatures', label:'Finance Features', type:'multi', group:'featureFields', data:'financeFeatures'},
+      {id:'personalization', label:'Personalization', type:'multi', group:'notesFields', data:'personalization'},
+      {id:'seasonalStyle', label:'Seasonal Style', type:'single', group:'featureFields', data:'seasonalStyle'},
+      {id:'extraEmbellishments', label:'Extra Embellishments', type:'multi', group:'featureFields', data:'extraEmbellishments'},
+      {id:'customNotes', label:'Custom Notes', type:'textarea', group:'notesFields', placeholder:'Add special directions, mix instructions, product notes, or audience details.'}
+    ];
+
+    const OPTIONS = {
+      insertType:[
+        'Academic Planner Insert','Affirmation Insert','Bible Study Insert','Blank Notes Insert','Book Review Insert','Brain Dump Insert','Budget Insert','Business Planning Insert','Checklist Insert','Cleaning Schedule Insert','Content Calendar Insert','Daily Planner Insert','Daily Reflection Insert','Dream Journal Insert','Fitness Tracker Insert','Goal Mapping Insert','Gratitude Insert','Habit Tracker Insert','Homeschool Insert','Meal Planning Insert','Memory Keeping Insert','Menstrual Wellness Insert','Monthly Planner Insert','Mood Tracker Insert','Prayer Journal Insert','Project Planner Insert','Routine Builder Insert','Savings Tracker Insert','Scripture Writing Insert','Self-Care Insert','Sleep Tracker Insert','Study Planner Insert','Travel Planner Insert','Vision Planning Insert','Weekly Planner Insert'
+      ],
+      audience:[
+        'Athlete Boys','Beginners','Busy Moms','Busy Professionals','College Students','Content Creators','Couples','Creative Entrepreneurs','Digital Product Sellers','Faith-Based Women','Families','Female Founders','Freelancers','Goal Getters','Grandmothers','Health Journey Users','High School Students','Homeschool Families','Kids','Men Over 40','Minimalist Users','New Brides','Nurses','Pastors','Productivity Lovers','Retirees','Self-Care Seekers','Small Business Owners','Teachers','Teens','Travel Lovers','Women Over 40'
+      ],
+      theme:[
+        'Bold and Glam','Calm and Cozy','Celebration Energy','Chic Editorial','Clean and Neutral','Colorful Confidence','Corporate Polish','Creative Studio','Dark Academia','Faith and Focus','Farmhouse Soft','Flexible Neutral','Fresh Start','Golden Luxe','Graceful Minimalist','Growth Season','Holiday Cheer','Moody Modern','Nature Inspired','Old Money Classic','Pink Power','Playful Bright','Power Planner','Quiet Luxury','Rustic Warmth','Soft Feminine','Sporty and Strong','Spring Refresh','Summer Glow','Vision Board Vibes','Wellness Reset','Winter Calm'
+      ],
+      useCase:[
+        'Bible Study','Birthday Planning','Blog Planning','Book Club Notes','Budgeting','Business Growth','Chore Planning','Client Management','Content Planning','Course Notes','Daily Focus','Devotional Time','Event Planning','Fitness Goals','General Planning','Goal Setting','Gratitude Practice','Habit Building','Homeschool Planning','Household Management','Manifestation Journaling','Meal Prep','Memory Keeping','Mindset Work','Morning Routine','Prayer Time','Project Mapping','Self-Care Routine','Sleep Routine','Social Media Planning','Study Sessions','Time Blocking','Travel Prep','Wedding Planning','Wellness Journey'
+      ],
+      pageSize:[
+        'A4','A5','A6','B5','Big Happy Planner','Classic Happy Planner','Half Letter','Half Sheet','Letter','Mini Happy Planner','Mini Wide','Passport','Personal','Personal Wide','Pocket','Quarter Sheet','Recipe Card','Standard TN','Sticker Sheet','Tabloid','Teacher Planner','Traveler Notebook Regular','Traveler Notebook Wide','Undated Dashboard Card','US Legal','Vertical Dashboard','Vision Board Sheet','Wide Letter','Wide Notebook','XL Happy Planner','Zine Fold Sheet'
+      ],
+      orientation:[
+        'Booklet Spread','Fold-Out Layout','Horizontal Dashboard','Landscape','Left Page','Mini Landscape','Mini Portrait','Notebook Wide','Portrait','Printable Spread','Right Page','Slim Landscape','Slim Portrait','Square','Top Fold','Two-Page Landscape','Two-Page Portrait','Undated Card Style','Vertical Dashboard','Vertical Half Split','Vision Board Layout','Wide Landscape','Wide Portrait','Worksheet Layout','Zine Front','Zine Inside'
+      ],
+      layoutStyle:[
+        'Block Schedule Layout','Boxed Grid Layout','Checklist Layout','Clean Open Layout','Clustered Layout','Column Layout','Daily Focus Layout','Dashboard Layout','Decorative Layered Layout','Goal Mapping Layout','Grid Layout','Guided Journal Layout','Half Planner Half Notes','Index Card Layout','Journal Prompt Layout','Kanban Layout','Layered Section Layout','List Builder Layout','Minimal Margin Layout','Modular Layout','Notes + Planner Split','Prompt + Tracker Layout','Routine Flow Layout','Scrapbook Layout','Sectioned Sidebar Layout','Storyline Layout','Symmetrical Layout','Task + Reflection Layout','Time Blocking Layout','Timeline Layout','Tracker Board Layout','Two-Column Layout','Vision Board Layout','Weekly Grid Layout'
+      ],
+      insertSections:[
+        'Action Plan','Affirmation Space','Appointment Box','Bills Due Section','Book Notes','Brain Dump Space','Budget Breakdown','Checklist','Cleaning Tasks','Client Tasks','Content Ideas','Daily Reflection','Daily Schedule','Expenses Log','Focus Blocks','Goal Breakdown','Gratitude Space','Habit Tracker','Hydration Tracker','Meal Plan','Meeting Notes','Memory Box','Monthly Goals','Mood Tracker','Notes Area','Posting Checklist','Prayer Space','Project Milestones','Savings Goals','Scripture Notes','Self-Care Check-In','Sleep Log','Spending Tracker','Study Tracker','Task List','Water Tracker','Weekly Wins'
+      ],
+      headerElements:[
+        'Affirmation Header','Bible Verse Header','Brand Name Space','Category Label','Check-In Title','Course Name','Custom Subtitle','Date Box','Day of Week','Dream Big Header','Family Name','Focus Word','Goal of the Day','Important Label','Insert Number','Main Title','Menu Tabs','Month Header','Name on Page','Page Number','Planner Section Tabs','Priority Banner','Project Name','Quarter Header','Season Label','Small Quote Header','Subject Header','Today Header','Top Icon Strip','Vision Header','Week Number'
+      ],
+      footerElements:[
+        'Action Footer','Affirmation Footer','Bible Verse Footer','Brand Handle Footer','Checklist Footer','Copyright Line','Decorative Footer Strip','Encouragement Footer','Extra Notes Footer','Faith Footer','Goal Footer','Gratitude Footer','Habit Footer','Hydration Footer','Mini Calendar Footer','Monthly Review Footer','Motivational Footer','Page Number Footer','Planner Key Footer','Prayer Footer','Progress Footer','Scripture Footer','Section Legend','Social Handle Footer','Sticker Placement Footer','Thankful Footer','Time Footer','Water Footer','Wins Footer','Word of the Week Footer'
+      ],
+      trackerElements:[
+        'Book Reading Tracker','Budget Spend Tracker','Cleaning Tracker','Content Consistency Tracker','Cycle Tracker','Expense Tracker','Faith Habit Tracker','Focus Tracker','Goal Progress Tracker','Gratitude Tracker','Habit Streak Tracker','Hydration Tracker','Meal Tracker','Medication Tracker','Memory Tracker','Mood Tracker','Movement Tracker','No-Spend Tracker','Pain Tracker','Prayer Tracker','Savings Tracker','Screen Time Tracker','Self-Care Tracker','Sleep Tracker','Step Tracker','Study Tracker','Symptom Tracker','Task Completion Tracker','Water Tracker','Weight Tracker','Wins Tracker'
+      ],
+      journalElements:[
+        'Affirmation Prompt','Bible Reflection','Brain Dump Prompt','Daily Reflection Prompt','Emotional Check-In','End of Day Review','Favorite Memory','Forgiveness Prompt','Future Self Letter','God Is Teaching Me','Gratitude Prompt','Guided Journaling Space','Journal Question Box','Lessons Learned','Manifestation Prompt','Memory Snapshot','Mindset Reframe','Morning Pages','Prayer Reflection','Prompt of the Day','Reflection Lines','Scripture Reflection','Self-Talk Reset','Storytelling Box','Thankful Thoughts','Today I Feel','Vision Reflection','Voice Note Prompt','What I Need Today','Wins Reflection','Word of the Day'
+      ],
+      plannerElements:[
+        'Appointment Tracker','Big Three Priorities','Brain Dump List','Call List','Checklist Column','Chore Plan','Client Deadline Box','Content Schedule','Daily Focus Box','Deadline List','Errands List','Event Planning Box','Focus Section','Goal Tasks','Important Tasks','Meal Prep Section','Meeting Agenda','MIT Section','Monthly Snapshot','Next Week Prep','Notes Column','Posting Schedule','Priority Matrix','Project Roadmap','Reminder Box','Routine Stack','Task List','Time Blocking','Top Tasks','Weekly Overview','Work Blocks'
+      ],
+      decorativeStyle:[
+        'Abstract Shapes','Artsy Scribble Accents','Bold Editorial','Bow Details','Butterfly Glam','Celestial Minimal','Checkerboard Pop','Classic Planner Chic','Clean Luxury','Coastal Calm','Collage Details','Cottagecore Soft','Crystals and Stars','Dark Floral','Delicate Frames','Doodle Notes','Elegant Foil Feel','Faith-Inspired Grace','Geometric Modern','Glitter Glam','Gold Corner Accents','Gradient Glow','Grid Notes Style','Hand-Drawn Touch','High-End Minimal','Illustrated Elements','Ink Wash Mood','Layered Cards','Luxury Labels','Minimal Lines','Modern Soft Glam','Old Money Elegant','Paper Cut Layers','Playful Stickers','Soft Botanical','Sporty Icons','Vintage Stationery'
+      ],
+      fontStyle:[
+        'All Caps Sans','Art Deco Serif','Bold Modern Sans','Bold Script Accent','Bubble Sans','Calligraphy Accent','Chunky Display','Classic Planner Serif','Clean Rounded Sans','Condensed Editorial','Crisp Sans','Delicate Serif','Elegant Sans','Fancy Script','Geometric Sans','Handwritten Notes','High-Contrast Serif','Luxury Sans','Marker Style','Minimal Modern','Mixed Serif and Sans','Monoline Script','Notebook Print','Old Style Serif','Playful Rounded','Poster Sans','Retro Serif','Simple Serif','Soft Script','Strong Sans','Typewriter','Vintage Serif'
+      ],
+      colorPalette:[
+        'Black and Gold','Black and White','Blush and Beige','Blue and Silver','Bold Primary Mix','Bronze and Cream','Brown and Ivory','Candy Pink Pop','Charcoal and White','Classic Navy and Gold','Cool Gray and Blue','Coral and Peach','Cream and Gold','Dusty Rose and Taupe','Emerald and Gold','Forest and Cream','Hot Pink and Orange','Lavender and Silver','Lilac and White','Mocha and Sand','Monochrome Black','Muted Earth Tones','Navy and White','Neutral Greige','Olive and Linen','Peach and Gold','Pink and Black','Plum and Mauve','Red and Blush','Royal Blue and Gold','Sage and Cream','Teal and Gold'
+      ],
+      borderStyle:[
+        'Angled Frame','Arch Border','Beaded Border','Bold Box Border','Botanical Corner Border','Bow Border','Bracket Border','Broken Grid Border','Checker Edge Border','Clean No Border','Cloud Border','Corner Flourish Border','Double Line Border','Dotted Border','Embossed Look Border','Foil Frame Border','Geometric Border','Gilded Frame','Grid Border','Heart Border','Label Tab Border','Lace Border','Minimal Border','Notebook Edge Border','Rounded Box Border','Scallop Border','Shadow Box Border','Soft Glow Border','Split Border','Sticker Edge Border','Vintage Frame','Washi Tape Border'
+      ],
+      lineStyle:[
+        'Bold Divider Lines','Broken Lines','Classic Planner Lines','Clean No Lines','Curved Divider Lines','Dashed Lines','Decorative Rule Lines','Doodle Lines','Double Rules','Faded Guidelines','Fine Lined Writing Area','Grid Paper Lines','Hand-Drawn Lines','Heavy Sidebar Lines','Highlight Bar Lines','Ledger Lines','Minimal Section Lines','Notebook Ruled Lines','Offset Dividers','Outline Blocks','Pointed Dividers','Rounded Section Lines','Sidebar Accent Lines','Soft Dot Grid','Soft Section Rules','Split Panel Lines','Storybook Lines','Task Box Lines','Timeline Lines','Underlined Headers','Wave Lines','Wide Writing Lines'
+      ],
+      iconStyle:[
+        'Arrow Icons','Bible Icons','Bow Icons','Calendar Icons','Checklist Icons','Cleaning Icons','Clock Icons','Content Icons','Crayon Icons','Dollar Icons','Doodle Hearts','Faith Icons','Fitness Icons','Floral Icons','Food Icons','Gem Icons','Goal Icons','Habit Icons','Laptop Icons','Leaf Icons','Lightbulb Icons','Minimal Dots','Mood Face Icons','Notebook Icons','Planner Tabs','Prayer Icons','Sparkle Icons','Sports Icons','Star Icons','Sticker Icons','Travel Icons','Water Drop Icons'
+      ],
+      bindingStyle:[
+        'Bookbound','Boxed Set Insert','Coil Bound','Disc Bound','Dot Grid Book','Flat Loose Page','Hardback Planner','Happy Planner Punch','Insert Card Pack','Laminated Dashboard','Loose Printable Sheet','Mini Binder','Notebook Refill','Passport TN','Perfect Bound','Personal Planner Punch','Pocket Folder Insert','Ring Bound','Side Stapled','Spiral Bound','Standard TN','Tabbed Divider Set','Teacher Planner Coil','Top Punched','Top Spiral','Traveler Elastic Insert','Two-Hole Punch','Undated Refill Pack','Wide Binder','Wire-O Bound','Zipped Folio Insert'
+      ],
+      paperStyle:[
+        'Bright White Paper','Classic Matte','Coated Smooth','Cream Premium','Deckled Edge Feel','Disc Bound Format','Dot Grid Paper','Eco Recycled','Faint Texture','Faux Vellum Feel','Gloss Cover Insert','Heavy Cardstock','Ivory Smooth','Kraft Paper Look','Linen Texture','Marker Friendly','Matte Premium','Minimal Smooth','Mixed Media Paper','Notebook Paper','Pastel Wash Paper','Premium Planner Stock','Printable Black Ink Mode','Printable Color Mode','Rice Paper Feel','Soft Cotton Paper','Soft Premium Paper','Sticker Paper Feel','Textured Luxe Paper','Transparency Overlay Feel','Warm White Paper','Writing Friendly Paper'
+      ],
+      productivityFeatures:[
+        'Action Priority System','Batch Task Area','Big Three Focus','Brain Dump Zone','Client Follow-Up Space','Color Code Key','Deadline Alert Box','Deep Work Blocks','Done List','Energy Check Bar','Focus Meter','Goal Ladder','High Impact Tasks','Inbox Capture Space','Kanban Mini Board','Micro Task Breakdown','Milestone Tracker','Morning Reset Box','Next Steps Column','Pomodoro Tracker','Priority Matrix','Project Stage Labels','Quick Wins Box','Reminder Flags','Review and Reset','Rolling Task List','Routine Builder','Start Here Prompt','Time Audit Box','Time Blocking','Top Priorities','Weekly Focus Meter'
+      ],
+      wellnessFeatures:[
+        'Affirmation Lines','Anxiety Release Prompt','Body Check-In','Breathing Prompt','Calm Down Steps','Cycle Check-In','Daily Encouragement','Energy Level Meter','Gentle Goals','Gratitude Breath','Grounding Prompt','Healthy Habit Prompt','Hydration Goal','Joy List','Meal Planning Prompt','Mental Reset Box','Mood Reset Prompt','Movement Goal','Nature Time Prompt','Nervous System Reset','Rest Reminder','Self-Compassion Prompt','Self-Care Menu','Sleep Routine Prompt','Slow Down Reminder','Stress Scale','Sunshine Time Prompt','Therapy Reflection','Water First Prompt','Wellness Goal Box','What I Need Today','Win of the Day'
+      ],
+      faithFeatures:[
+        'Bible Reading Plan','Blessings List','Church Notes Space','Faith Declaration','Faith Goal Box','Forgiveness Prayer Prompt','God Is Speaking Prompt','Gratitude to God','Hope Prompt','Inspirational Verse Box','Meditation Verse Space','Prayer of Thanks','Prayer Request List','Prayer Tracker','Praise Report Space','Scripture Copywork','Scripture Memory Box','Scripture of the Day','Sermon Notes','Spiritual Check-In','Thank You Jesus Prompt','Today I Trust God With','Verse Mapping Block','Worship Reflection','Word Study Section','Faithful Steps Box','Prayer Circle Space','Answered Prayer Log','Daily Devotional Box','God’s Promises Box','Prayer for Others','Grace Notes'
+      ],
+      businessFeatures:[
+        'Affiliate Content Plan','Audience Pain Point Box','Brand Message Notes','Call to Action Planner','Caption Draft Space','Client Pipeline Box','Content Batch Plan','Content Pillar Box','Course Idea Tracker','Digital Product Plan','Email Sequence Notes','Engagement Prompt List','Launch Checklist','Lead Magnet Planner','Marketing Angle Box','Mini Offer Planner','Monetization Ideas','Offer Stack Builder','Platform Breakdown','Posting Checklist','Product Brainstorm','Product Hook Box','Promo Calendar','Sales Funnel Notes','SEO Keyword Box','Shop Update Tracker','Story Content Plan','Testimonial Prompt Box','Trend Watch List','Video Script Outline','Weekly Revenue Notes','Workflow Streamline Box'
+      ],
+      financeFeatures:[
+        'Bill Payment Tracker','Budget Category Split','Cash Envelope List','Coupon Reminder','Debt Payoff Box','Emergency Fund Goal','Expense Log','Financial Gratitude Prompt','Income Tracker','Monthly Bills List','Monthly Savings Goal','No-Spend Challenge','Payment Due Dates','Paycheck Plan','Purchase Reflection','Receipt Checklist','Savings Challenge Tracker','Savings Goal Ladder','Side Hustle Income','Sinking Fund Planner','Spending Categories','Spending Reflection','Subscription Audit','Tax Prep Notes','Transaction Log','Travel Fund Tracker','Weekly Money Check-In','Wishlist Budget Box','Yearly Money Goal','Zero-Based Budget','Money Mindset Notes','Quarterly Finance Review'
+      ],
+      personalization:[
+        'Brand Name Space','Calligraphy Name','Category Label Space','Child Name Space','Custom Footer Quote','Custom Header Quote','Custom Notes Area','Date Personalization','Editable Family Name','Editable Focus Word','Editable Goal Line','Editable Subtitle','Editable Tagline','Icon Swap Area','Initial Monogram','Mini Bio Box','Name on Page','Personal Prayer Prompt','Personal Routine Cue','Photo Placeholder','Planner Owner Name','Product Name Space','Signature Line','Special Date Box','Sticker Placement Space','Teacher Name Space','Theme Name Line','Top Priority Cue','Vision Statement Space','Word of the Year Space','Year Label Space'
+      ],
+      seasonalStyle:[
+        'Anniversary Keepsake','Autumn Cozy','Back to School','Birthday Celebration','Christmas Cheer','Easter Joy','Fall Harvest','Fresh January','Graduation Season','Halloween Fun','Holiday Hosting','Late Summer Glow','Mother\'s Day Soft','New Month Reset','New Year Vision','Spring Bloom','Spring Cleaning','Summer Bright','Summer Vacation','Thanksgiving Gratitude','Valentine Love','Winter Calm','Winter Planning','Year-End Review','Year-Round Classic','September Reset','October Mood','November Thankful','December Magic','March Momentum','April Renewal','July Fireworks'
+      ],
+      extraEmbellishments:[
+        'Accent Tabs','Arch Labels','Badge Shapes','Bookmark Cut Line','Bow Clip Art','Butterfly Motif','Calendar Mini Strip','Checklist Flags','Cloud Labels','Confetti Sprinkle','Corner Flourishes','Crystal Accents','Date Stamp Area','Decorative Boxes','Diamond Sparkles','Faux Washi Tape','Floral Corners','Foil Accent Spots','Frame Layering','Glitter Dust Details','Grid Stickers','Habit Icons','Heart Clips','Label Stickers','Mini Quote Bubbles','Pattern Strip','Photo Frame Space','Ribbon Divider','Seasonal Doodles','Section Highlights','Shimmer Glow','Star Scatter'
+      ]
+    };
+
+    // Validate, sort alphabetically, and prepend None.
+    Object.keys(OPTIONS).forEach(key => {
+      const cleaned = [...new Set(OPTIONS[key])].sort((a,b)=>a.localeCompare(b));
+      if (cleaned.length < 30) console.warn(key + ' has fewer than 30 options');
+      OPTIONS[key] = ['None', ...cleaned];
+    });
+
+    const PRESETS = [
+      {name:'Power Planner Daily', vibe:['Productivity','Planner'], values:{insertTitle:'Power Planner Daily Planner', insertType:'Daily Planner Insert', audience:'Productivity Lovers', theme:'Power Planner', useCase:'Daily Focus', pageSize:'Letter', orientation:'Portrait', layoutStyle:'Daily Focus Layout', decorativeStyle:'Bold Editorial', fontStyle:'Bold Modern Sans', colorPalette:'Black and Gold', borderStyle:'Rounded Box Border', lineStyle:'Classic Planner Lines', iconStyle:'Checklist Icons', bindingStyle:'Disc Bound', paperStyle:'Soft Premium Paper', seasonalStyle:'Year-Round Classic', insertSections:['Big Three Priorities','Checklist','Daily Schedule','Focus Blocks','Task List','Water Tracker'], headerElements:['Date Box','Priority Banner','Today Header'], footerElements:['Wins Footer'], trackerElements:['Task Completion Tracker','Water Tracker'], plannerElements:['Big Three Priorities','Focus Section','Task List','Time Blocking','Top Tasks'], productivityFeatures:['Big Three Focus','Priority Matrix','Time Blocking','Weekly Focus Meter'], personalization:['Name on Page','Editable Goal Line'], extraEmbellishments:['Section Highlights'] }},
+      {name:'Prayer and Scripture Notes', vibe:['Faith','Journal'], values:{insertTitle:'Prayer and Scripture Journal', insertType:'Prayer Journal Insert', audience:'Faith-Based Women', theme:'Faith and Focus', useCase:'Prayer Time', pageSize:'A5', orientation:'Portrait', layoutStyle:'Guided Journal Layout', decorativeStyle:'Faith-Inspired Grace', fontStyle:'Elegant Sans', colorPalette:'Cream and Gold', borderStyle:'Botanical Corner Border', lineStyle:'Soft Section Rules', iconStyle:'Prayer Icons', bindingStyle:'Ring Bound', paperStyle:'Cream Premium', seasonalStyle:'Year-Round Classic', insertSections:['Notes Area','Prayer Space','Scripture Notes'], headerElements:['Bible Verse Header','Main Title'], footerElements:['Prayer Footer','Scripture Footer'], journalElements:['Prayer Reflection','Scripture Reflection','What I Need Today'], faithFeatures:['Prayer Request List','Scripture of the Day','Gratitude to God','Prayer of Thanks'], extraEmbellishments:['Floral Corners','Shimmer Glow'] }},
+      {name:'Wellness Reset Tracker', vibe:['Wellness','Tracker'], values:{insertTitle:'Wellness Reset Daily Check-In', insertType:'Self-Care Insert', audience:'Wellness Journey Users', theme:'Wellness Reset', useCase:'Wellness Journey', pageSize:'Half Letter', orientation:'Portrait', layoutStyle:'Tracker Board Layout', decorativeStyle:'Soft Botanical', fontStyle:'Clean Rounded Sans', colorPalette:'Sage and Cream', borderStyle:'Soft Glow Border', lineStyle:'Soft Dot Grid', iconStyle:'Water Drop Icons', bindingStyle:'Mini Binder', paperStyle:'Writing Friendly Paper', seasonalStyle:'Spring Bloom', insertSections:['Mood Tracker','Self-Care Check-In','Sleep Log','Water Tracker'], headerElements:['Focus Word','Today Header'], footerElements:['Hydration Footer','Thankful Footer'], trackerElements:['Hydration Tracker','Mood Tracker','Sleep Tracker'], wellnessFeatures:['Energy Level Meter','Self-Care Menu','Stress Scale','What I Need Today'], journalElements:['Emotional Check-In','Gratitude Prompt'] }},
+      {name:'Money Moves Budget Page', vibe:['Budget','Finance'], values:{insertTitle:'Money Moves Budget Planner', insertType:'Budget Insert', audience:'Busy Professionals', theme:'Quiet Luxury', useCase:'Budgeting', pageSize:'Letter', orientation:'Portrait', layoutStyle:'Column Layout', decorativeStyle:'Clean Luxury', fontStyle:'Luxury Sans', colorPalette:'Emerald and Gold', borderStyle:'Gilded Frame', lineStyle:'Ledger Lines', iconStyle:'Dollar Icons', bindingStyle:'Ring Bound', paperStyle:'Matte Premium', seasonalStyle:'New Month Reset', insertSections:['Bills Due Section','Budget Breakdown','Expenses Log','Savings Goals'], headerElements:['Month Header','Main Title'], footerElements:['Progress Footer'], trackerElements:['Budget Spend Tracker','Expense Tracker','Savings Tracker'], financeFeatures:['Budget Category Split','Expense Log','Monthly Bills List','Savings Goal Ladder','Zero-Based Budget'] }},
+      {name:'Content Creator Dashboard', vibe:['Content','Business'], values:{insertTitle:'Creator Content Planner', insertType:'Content Calendar Insert', audience:'Content Creators', theme:'Bold and Glam', useCase:'Content Planning', pageSize:'Letter', orientation:'Landscape', layoutStyle:'Dashboard Layout', decorativeStyle:'Glitter Glam', fontStyle:'Condensed Editorial', colorPalette:'Royal Blue and Gold', borderStyle:'Shadow Box Border', lineStyle:'Sidebar Accent Lines', iconStyle:'Content Icons', bindingStyle:'Coil Bound', paperStyle:'Bright White Paper', seasonalStyle:'September Reset', insertSections:['Content Ideas','Notes Area','Posting Checklist'], headerElements:['Brand Name Space','Main Title'], footerElements:['Social Handle Footer'], plannerElements:['Content Schedule','Posting Schedule'], businessFeatures:['Audience Pain Point Box','Caption Draft Space','Content Pillar Box','Posting Checklist','Video Script Outline'], extraEmbellishments:['Diamond Sparkles','Accent Tabs'] }},
+      {name:'Gratitude and Reflection', vibe:['Journal','Reflection'], values:{insertTitle:'Daily Gratitude and Reflection', insertType:'Daily Reflection Insert', audience:'Beginners', theme:'Calm and Cozy', useCase:'Gratitude Practice', pageSize:'A5', orientation:'Portrait', layoutStyle:'Task + Reflection Layout', decorativeStyle:'Minimal Lines', fontStyle:'Soft Script', colorPalette:'Dusty Rose and Taupe', borderStyle:'Minimal Border', lineStyle:'Wide Writing Lines', iconStyle:'Sparkle Icons', bindingStyle:'Standard TN', paperStyle:'Warm White Paper', seasonalStyle:'Winter Calm', insertSections:['Daily Reflection','Gratitude Space','Notes Area'], journalElements:['End of Day Review','Gratitude Prompt','Wins Reflection'], footerElements:['Thankful Footer','Wins Footer'], wellnessFeatures:['Affirmation Lines','Joy List'] }},
+      {name:'Student Study Planner', vibe:['Study','Planner'], values:{insertTitle:'Focused Study Session Planner', insertType:'Study Planner Insert', audience:'College Students', theme:'Clean and Neutral', useCase:'Study Sessions', pageSize:'Letter', orientation:'Portrait', layoutStyle:'Modular Layout', decorativeStyle:'Geometric Modern', fontStyle:'Geometric Sans', colorPalette:'Blue and Silver', borderStyle:'Grid Border', lineStyle:'Grid Paper Lines', iconStyle:'Notebook Icons', bindingStyle:'Spiral Bound', paperStyle:'Marker Friendly', seasonalStyle:'Back to School', insertSections:['Checklist','Study Tracker','Task List'], headerElements:['Subject Header','Week Number'], footerElements:['Section Legend'], trackerElements:['Study Tracker'], plannerElements:['Deadline List','Focus Section','Task List'], productivityFeatures:['Action Priority System','Review and Reset'] }},
+      {name:'Morning Routine Reset', vibe:['Routine','Wellness'], values:{insertTitle:'Morning Reset Routine Builder', insertType:'Routine Builder Insert', audience:'Women Over 40', theme:'Fresh Start', useCase:'Morning Routine', pageSize:'Half Letter', orientation:'Portrait', layoutStyle:'Routine Flow Layout', decorativeStyle:'Gradient Glow', fontStyle:'Minimal Modern', colorPalette:'Peach and Gold', borderStyle:'Rounded Box Border', lineStyle:'Rounded Section Lines', iconStyle:'Habit Icons', bindingStyle:'Disc Bound', paperStyle:'Printable Color Mode', seasonalStyle:'Fresh January', insertSections:['Checklist','Habit Tracker','Self-Care Check-In'], headerElements:['Focus Word','Today Header'], trackerElements:['Habit Streak Tracker'], plannerElements:['Routine Stack'], wellnessFeatures:['Breathing Prompt','Morning Reset Box','Water First Prompt'] }},
+      {name:'Business CEO Planning', vibe:['Business','Goals'], values:{insertTitle:'CEO Weekly Planning Page', insertType:'Business Planning Insert', audience:'Female Founders', theme:'Corporate Polish', useCase:'Business Growth', pageSize:'Letter', orientation:'Landscape', layoutStyle:'Weekly Grid Layout', decorativeStyle:'High-End Minimal', fontStyle:'Strong Sans', colorPalette:'Classic Navy and Gold', borderStyle:'Double Line Border', lineStyle:'Minimal Section Lines', iconStyle:'Goal Icons', bindingStyle:'Wire-O Bound', paperStyle:'Premium Planner Stock', seasonalStyle:'Year-Round Classic', insertSections:['Action Plan','Goal Breakdown','Meeting Notes','Weekly Wins'], headerElements:['Project Name','Week Number'], footerElements:['Goal Footer'], plannerElements:['Goal Tasks','Project Roadmap','Weekly Overview'], businessFeatures:['Launch Checklist','Offer Stack Builder','Weekly Revenue Notes','Workflow Streamline Box'], productivityFeatures:['Milestone Tracker','Top Priorities'] }},
+      {name:'Meal and Habit Planner', vibe:['Home','Health'], values:{insertTitle:'Meal and Habit Balance Page', insertType:'Habit Tracker Insert', audience:'Families', theme:'Nature Inspired', useCase:'Meal Prep', pageSize:'Letter', orientation:'Portrait', layoutStyle:'Half Planner Half Notes', decorativeStyle:'Coastal Calm', fontStyle:'Simple Serif', colorPalette:'Olive and Linen', borderStyle:'Arch Border', lineStyle:'Faded Guidelines', iconStyle:'Food Icons', bindingStyle:'Mini Binder', paperStyle:'Eco Recycled', seasonalStyle:'Spring Cleaning', insertSections:['Habit Tracker','Meal Plan','Notes Area'], trackerElements:['Habit Streak Tracker','Meal Tracker'], plannerElements:['Checklist Column'], wellnessFeatures:['Healthy Habit Prompt','Meal Planning Prompt'] }},
+      {name:'Travel Prep Insert', vibe:['Travel','Checklist'], values:{insertTitle:'Travel Prep and Packing Planner', insertType:'Travel Planner Insert', audience:'Travel Lovers', theme:'Playful Bright', useCase:'Travel Prep', pageSize:'A5', orientation:'Portrait', layoutStyle:'Checklist Layout', decorativeStyle:'Paper Cut Layers', fontStyle:'Poster Sans', colorPalette:'Teal and Gold', borderStyle:'Sticker Edge Border', lineStyle:'Task Box Lines', iconStyle:'Travel Icons', bindingStyle:'Traveler Elastic Insert', paperStyle:'Matte Premium', seasonalStyle:'Summer Vacation', insertSections:['Checklist','Notes Area','Task List'], headerElements:['Main Title','Date Box'], footerElements:['Extra Notes Footer'], plannerElements:['Errands List','Reminder Box'], extraEmbellishments:['Calendar Mini Strip','Pattern Strip'] }},
+      {name:'Manifestation Journal Spread', vibe:['Mindset','Journal'], values:{insertTitle:'Manifest and Move Journal Spread', insertType:'Dream Journal Insert', audience:'Self-Care Seekers', theme:'Colorful Confidence', useCase:'Manifestation Journaling', pageSize:'Wide Letter', orientation:'Two-Page Landscape', layoutStyle:'Vision Board Layout', decorativeStyle:'Collage Details', fontStyle:'Fancy Script', colorPalette:'Lavender and Silver', borderStyle:'Foil Frame Border', lineStyle:'Storybook Lines', iconStyle:'Star Icons', bindingStyle:'Bookbound', paperStyle:'Textured Luxe Paper', seasonalStyle:'New Year Vision', journalElements:['Future Self Letter','Manifestation Prompt','Vision Reflection'], insertSections:['Affirmation Space','Brain Dump Space','Notes Area'], extraEmbellishments:['Confetti Sprinkle','Photo Frame Space','Shimmer Glow'], personalization:['Vision Statement Space','Word of the Year Space'] }},
+      {name:'Homeschool Lesson Planner', vibe:['Family','School'], values:{insertTitle:'Homeschool Lesson and Notes Page', insertType:'Homeschool Insert', audience:'Homeschool Families', theme:'Creative Studio', useCase:'Homeschool Planning', pageSize:'Letter', orientation:'Portrait', layoutStyle:'Sectioned Sidebar Layout', decorativeStyle:'Illustrated Elements', fontStyle:'Notebook Print', colorPalette:'Cool Gray and Blue', borderStyle:'Bracket Border', lineStyle:'Notebook Ruled Lines', iconStyle:'Crayon Icons', bindingStyle:'Happy Planner Punch', paperStyle:'Writing Friendly Paper', seasonalStyle:'Back to School', headerElements:['Subject Header','Date Box'], plannerElements:['Checklist Column','Notes Column'], insertSections:['Checklist','Notes Area','Study Tracker'], trackerElements:['Study Tracker'], personalization:['Teacher Name Space','Child Name Space'] }},
+      {name:'Faith and Wellness Check-In', vibe:['Faith','Wellness'], values:{insertTitle:'Faith and Wellness Reset Page', insertType:'Self-Care Insert', audience:'Faith-Based Women', theme:'Graceful Minimalist', useCase:'Wellness Journey', pageSize:'Half Letter', orientation:'Portrait', layoutStyle:'Prompt + Tracker Layout', decorativeStyle:'Soft Botanical', fontStyle:'Delicate Serif', colorPalette:'Forest and Cream', borderStyle:'Botanical Corner Border', lineStyle:'Soft Section Rules', iconStyle:'Faith Icons', bindingStyle:'Ring Bound', paperStyle:'Soft Cotton Paper', seasonalStyle:'April Renewal', trackerElements:['Mood Tracker','Prayer Tracker','Water Tracker'], wellnessFeatures:['Grounding Prompt','Stress Scale'], faithFeatures:['Daily Devotional Box','Prayer Request List','Scripture of the Day'], journalElements:['God Is Teaching Me','Prayer Reflection'], insertSections:['Prayer Space','Self-Care Check-In','Water Tracker'] }},
+      {name:'No-Spend Challenge Page', vibe:['Finance','Challenge'], values:{insertTitle:'No-Spend Challenge Tracker', insertType:'Savings Tracker Insert', audience:'Beginners', theme:'Clean and Neutral', useCase:'Budgeting', pageSize:'A5', orientation:'Portrait', layoutStyle:'Tracker Board Layout', decorativeStyle:'Minimal Lines', fontStyle:'Crisp Sans', colorPalette:'Monochrome Black', borderStyle:'Minimal Border', lineStyle:'Outline Blocks', iconStyle:'Dollar Icons', bindingStyle:'Pocket Folder Insert', paperStyle:'Printable Black Ink Mode', seasonalStyle:'New Month Reset', trackerElements:['No-Spend Tracker','Savings Tracker'], financeFeatures:['No-Spend Challenge','Purchase Reflection','Weekly Money Check-In'], insertSections:['Savings Goals','Spending Tracker'] }}
+    ];
+
+    const INSPIRATION = [
+      {title:'Productivity', text:'Create a clean power page with priorities, time blocks, checklists, and wins.', note:'Build a polished productivity insert with strong hierarchy, useful task sections, and a premium planner feel.'},
+      {title:'Faith', text:'Mix prayer, scripture, devotion, and gratitude on one page.', note:'Focus on peaceful faith-based structure with scripture writing, prayer prompts, and reflective notes.'},
+      {title:'Wellness', text:'Blend mood, sleep, water, self-care, and gentle reset prompts.', note:'Use soft wellness details with calm sections, supportive check-ins, and easy daily tracking.'},
+      {title:'Budgeting', text:'Organize bills, savings goals, spending, and no-spend challenges.', note:'Create a clean money page with clear finance sections, practical tracking, and simple visual cues.'},
+      {title:'Content Creation', text:'Map ideas, posting plans, hooks, checklists, and notes.', note:'Build a creator planner page with content pillars, posting workflow, and room for brainstorms.'},
+      {title:'Business Planning', text:'Use launch steps, goals, revenue notes, and offer planning blocks.', note:'Aim for a CEO-style planning page with strategic sections and polished business energy.'},
+      {title:'Self-Care', text:'Pair affirmations, self-check-in, rest reminders, and reflection.', note:'Make the page warm, gentle, and easy to use with supportive prompts and soft design choices.'},
+      {title:'Journaling', text:'Use prompts, reflection lines, gratitude, and memory spaces.', note:'Shape this into a guided journaling page with thoughtful prompts and clean writing space.'},
+      {title:'Routines', text:'Blend morning reset, habit streaks, and routine stacking.', note:'Make a routine-focused insert that helps the user stay consistent without feeling cluttered.'},
+      {title:'Seasonal Planning', text:'Create a themed insert for holidays, spring reset, back to school, or year-end review.', note:'Bring in seasonal style, themed embellishments, and timely planning sections.'}
+    ];
+
+    const els = {};
+
+    function buildField(field){
+      const wrap = document.createElement('div');
+      wrap.className = 'field' + ((field.type==='textarea' || field.id==='insertTitle') ? ' full' : '');
+      const label = document.createElement('label');
+      label.htmlFor = field.id;
+      label.textContent = field.label;
+      wrap.appendChild(label);
+
+      let control;
+      if(field.type === 'text'){
+        control = document.createElement('input');
+        control.type = 'text';
+        control.placeholder = field.placeholder || '';
+      } else if(field.type === 'textarea'){
+        control = document.createElement('textarea');
+        control.placeholder = field.placeholder || '';
+      } else {
+        control = document.createElement('select');
+        if(field.type === 'multi') control.multiple = true;
+        OPTIONS[field.data].forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          control.appendChild(o);
+        });
+      }
+      control.id = field.id;
+      control.dataset.type = field.type;
+      wrap.appendChild(control);
+
+      const help = document.createElement('small');
+      help.className = 'help';
+      help.textContent = field.type === 'multi'
+        ? 'Tip: hold Ctrl or Cmd to select multiple options. The first option is None.'
+        : field.type === 'single'
+        ? 'Choose one option. The first option is None.'
+        : 'Use this for custom directions or extra details.';
+      wrap.appendChild(help);
+
+      document.getElementById(field.group).appendChild(wrap);
+      els[field.id] = control;
+      control.addEventListener('input', updateLivePreview);
+      control.addEventListener('change', updateLivePreview);
+    }
+
+    FIELD_DEFS.forEach(buildField);
+
+    function buildPresetCards(){
+      const box = document.getElementById('presetCards');
+      PRESETS.forEach((preset, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'preset-card';
+        card.innerHTML = `<h3>${preset.name}</h3><p>${preset.vibe.join(' • ')} preset with a ready-made setup you can tweak in seconds.</p>
+          <div>${preset.vibe.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+          <div class="section-actions"><button class="btn secondary" data-preset="${idx}">Use Preset</button></div>`;
+        box.appendChild(card);
+      });
+      box.addEventListener('click', (e)=>{
+        const btn = e.target.closest('[data-preset]');
+        if(!btn) return;
+        applyPreset(Number(btn.dataset.preset));
+      });
+    }
+
+    function buildInspirationCards(){
+      const box = document.getElementById('inspirationCards');
+      INSPIRATION.forEach((item, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'inspire-card';
+        card.innerHTML = `<h3>${item.title}</h3><p>${item.text}</p><div class="section-actions"><button class="btn secondary" data-inspire="${idx}">Use Idea</button></div>`;
+        box.appendChild(card);
+      });
+      box.addEventListener('click', (e)=>{
+        const btn = e.target.closest('[data-inspire]');
+        if(!btn) return;
+        const idea = INSPIRATION[Number(btn.dataset.inspire)];
+        const current = els.customNotes.value.trim();
+        els.customNotes.value = current ? current + '\n\n' + idea.note : idea.note;
+        setStatus(`Added inspiration: ${idea.title}.`);
+        scrollToId('builder');
+        updateLivePreview();
+      });
+    }
+
+    function setSingle(id, value){
+      if(!els[id]) return;
+      els[id].value = value || 'None';
+    }
+    function setMulti(id, values=[]){
+      if(!els[id]) return;
+      const set = new Set((values && values.length ? values : ['None']));
+      Array.from(els[id].options).forEach(o => o.selected = set.has(o.value));
+    }
+
+    function applyPreset(index){
+      clearAll(false);
+      const preset = PRESETS[index];
+      const vals = preset.values;
+      FIELD_DEFS.forEach(field => {
+        if(field.type === 'single') setSingle(field.id, vals[field.id] || 'None');
+        if(field.type === 'multi') setMulti(field.id, vals[field.id] || ['None']);
+      });
+      els.insertTitle.value = vals.insertTitle || preset.name;
+      els.customNotes.value = `Preset loaded: ${preset.name}. Adjust any sections you want before generating.`;
+      updateLivePreview();
+      generateOutput();
+      setStatus(`Preset loaded: ${preset.name}.`);
+      scrollToId('builder');
+    }
+
+    function quickStart(){
+      applyPreset(0);
+    }
+
+    function clearAll(update=true){
+      FIELD_DEFS.forEach(field=>{
+        if(field.type === 'text' || field.type === 'textarea') els[field.id].value = '';
+        if(field.type === 'single') els[field.id].value = 'None';
+        if(field.type === 'multi') setMulti(field.id, ['None']);
+      });
+      document.getElementById('finalOutput').textContent = '';
+      if(update) updateLivePreview();
+      setStatus('Everything cleared. Fresh slate.');
+    }
+
+    function chooseRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function randomize(){
+      FIELD_DEFS.forEach(field=>{
+        if(field.type === 'text') return;
+        if(field.type === 'textarea') return;
+        const pool = OPTIONS[field.data].filter(v=>v!=='None');
+        if(field.type === 'single'){
+          els[field.id].value = chooseRandom(pool);
+        }
+        if(field.type === 'multi'){
+          const count = Math.max(2, Math.min(4, Math.floor(Math.random()*4)+1));
+          const copy = [...pool].sort(()=>Math.random()-.5).slice(0,count);
+          setMulti(field.id, copy);
+        }
+      });
+      els.insertTitle.value = chooseRandom(['Daily Reset Insert','Planner Page Builder','Intentional Living Insert','Focus and Flow Page','Glam Goal Insert','Peace and Planning Page']);
+      els.customNotes.value = 'Randomized setup. Fine-tune anything that looks wild before generating.';
+      updateLivePreview();
+      generateOutput();
+      setStatus('Random setup loaded. Chaos, but classy.');
+    }
+
+    function getMultiValues(select){
+      return Array.from(select.selectedOptions).map(o=>o.value).filter(v=>v && v !== 'None');
+    }
+
+    function getState(){
+      const state = {};
+      FIELD_DEFS.forEach(field=>{
+        if(field.type === 'text' || field.type === 'textarea') state[field.id] = els[field.id].value.trim();
+        else if(field.type === 'single') state[field.id] = els[field.id].value === 'None' ? '' : els[field.id].value;
+        else state[field.id] = getMultiValues(els[field.id]);
+      });
+      return state;
+    }
+
+    function line(label, value){
+      if(Array.isArray(value)) value = value.length ? value.join(', ') : 'None selected';
+      return `${label}\n${value || 'None selected'}`;
+    }
+
+    function joinParts(arr, fallback='none selected'){ return arr && arr.length ? arr.join(', ') : fallback; }
+
+    function buildOutput(state){
+      const title = state.insertTitle || state.insertType || 'Custom Planner and Journal Insert';
+      const layoutDesc = [state.pageSize, state.orientation, state.layoutStyle].filter(Boolean).join(' • ') || 'Not fully specified';
+      const selectedSections = [
+        ...state.insertSections,
+        ...state.trackerElements,
+        ...state.journalElements,
+        ...state.plannerElements
+      ];
+      const designStyle = [state.decorativeStyle, state.fontStyle, state.borderStyle, state.lineStyle, state.iconStyle].filter(Boolean).join(', ') || 'Not specified';
+      const colorDirection = [state.colorPalette, state.paperStyle, state.seasonalStyle].filter(Boolean).join(' with ') || 'Not specified';
+      const personalization = [joinParts(state.personalization,''), state.customNotes].filter(Boolean).join(' | ') || 'No custom personalization added.';
+      const featureMix = [
+        ...state.productivityFeatures,
+        ...state.wellnessFeatures,
+        ...state.faithFeatures,
+        ...state.businessFeatures,
+        ...state.financeFeatures,
+        ...state.extraEmbellishments
+      ];
+
+      const printableConcept = `Create a ${state.pageSize || 'printable'} ${state.orientation ? state.orientation.toLowerCase() : 'portrait'} ${state.insertType ? state.insertType.toLowerCase() : 'planner or journal insert'} with a ${state.layoutStyle ? state.layoutStyle.toLowerCase() : 'clean layout'} structure. The page should feel ${state.theme || 'thoughtfully styled'} and be designed for ${state.audience || 'a flexible audience'} using sections for ${joinParts(state.insertSections,'functional and decorative planner blocks')}. Include ${joinParts(state.headerElements,'simple headers')} in the header and ${joinParts(state.footerElements,'supportive footer details')} in the footer. Use ${state.paperStyle || 'premium printable paper styling'} and a ${state.bindingStyle || 'versatile binding'} format. Feature extras like ${joinParts(featureMix,'subtle embellishments and useful features')} where they fit naturally.`;
+
+      const aiPrompt = `Create the actual printable planner or journal insert page titled "${title}". This is not a mockup and not a product photo. Generate the real page design only, shown flat and straight-on, with no desk props, no hands, no pens, no binder rings unless requested, no angled perspective, and no lifestyle scene. The page must be clean, high-resolution, printable, and ready to export as a PDF or PNG for use inside Canva. Use a ${layoutDesc.toLowerCase()} page with a ${state.useCase ? state.useCase.toLowerCase() : 'general planning'} focus. Build clear structured sections for ${joinParts(selectedSections,'functional writing and tracking sections')}. Add header elements: ${joinParts(state.headerElements,'clean title treatment')}. Add footer elements: ${joinParts(state.footerElements,'supportive footer styling')}. Include these extra feature layers where relevant: ${joinParts(featureMix,'helpful visual accents')}. Style direction: ${joinParts([state.theme, state.decorativeStyle, state.fontStyle, state.colorPalette, state.borderStyle].filter(Boolean),'clean premium styling')}. Make the layout neat, aligned, readable, and spaced properly, with crisp boxes, lines, trackers, dividers, and writing areas.`;
+
+      const mockupPrompt = `Create a styled product mockup for a printable insert titled "${title}". Show the insert as a polished digital product presentation using a ${state.theme || 'premium'} aesthetic, ${state.colorPalette || 'clean color palette'}, and ${state.decorativeStyle || 'refined decorative style'}. Present it as a realistic mockup for an online product listing with optional matching accessories and subtle brand-ready styling. Keep the insert itself readable and make the presentation feel suitable for Etsy, Payhip, Shopify, or a digital shop landing page.`;
+
+      const productDescription = `This ${state.insertType || 'planner insert'} is designed for ${state.audience || 'users who want a flexible planning page'}. It combines ${joinParts(state.insertSections,'practical planning sections')} with details like ${joinParts(featureMix,'useful extras')} to help users stay organized and inspired. The overall vibe is ${state.theme || 'clean and polished'}, with ${designStyle.toLowerCase()} and a ${state.colorPalette || 'versatile'} color direction.`;
+
+      const bundleIdea = `Bundle idea: pair this insert with ${joinParts(state.trackerElements,'supporting trackers')}, ${joinParts(state.journalElements,'matching journal pages')}, and ${joinParts(state.plannerElements,'planner companions')} to create a themed ${state.theme || 'premium'} insert bundle for ${state.useCase || 'daily life planning'}.`;
+
+      return [
+        line('INSERT TITLE', title),
+        '',
+        line('INSERT TYPE', state.insertType),
+        '',
+        line('AUDIENCE', state.audience),
+        '',
+        line('THEME', state.theme),
+        '',
+        line('LAYOUT DESCRIPTION', layoutDesc),
+        '',
+        line('SELECTED SECTIONS', selectedSections),
+        '',
+        line('DESIGN STYLE', designStyle),
+        '',
+        line('COLOR / STYLE DIRECTION', colorDirection),
+        '',
+        line('PERSONALIZATION DETAILS', personalization),
+        '',
+        line('PRINTABLE INSERT CONCEPT', printableConcept),
+        '',
+        line('AI-READY DESIGN PROMPT', aiPrompt),
+        '',
+        line('STYLED MOCKUP PROMPT', mockupPrompt),
+        '',
+        line('OPTIONAL PRODUCT DESCRIPTION', productDescription),
+        '',
+        line('OPTIONAL BUNDLE IDEA', bundleIdea)
+      ].join('\n');
+    }
+
+    function updateLivePreview(){
+      const state = getState();
+      const title = state.insertTitle || state.insertType || 'Custom Planner and Journal Insert';
+      const preview = [
+        `Title: ${title}`,
+        `Type: ${state.insertType || 'None selected'}`,
+        `Audience: ${state.audience || 'None selected'}`,
+        `Theme: ${state.theme || 'None selected'}`,
+        `Use Case: ${state.useCase || 'None selected'}`,
+        `Layout: ${[state.pageSize,state.orientation,state.layoutStyle].filter(Boolean).join(' • ') || 'None selected'}`,
+        `Main Sections: ${joinParts(state.insertSections)}`,
+        `Trackers: ${joinParts(state.trackerElements)}`,
+        `Journal Blocks: ${joinParts(state.journalElements)}`,
+        `Planner Blocks: ${joinParts(state.plannerElements)}`,
+        `Style: ${joinParts([state.decorativeStyle,state.fontStyle,state.colorPalette].filter(Boolean))}`,
+        `Extra Notes: ${state.customNotes || 'None yet'}`
+      ].join('\n');
+      document.getElementById('livePreview').textContent = preview;
+    }
+
+    function generateOutput(){
+      const state = getState();
+      const output = buildOutput(state);
+      document.getElementById('finalOutput').textContent = output;
+      setStatus('Output generated. Copy it or download it as a text file.');
+      scrollToId('outputSection');
+    }
+
+    async function copyOutput(){
+      const text = document.getElementById('finalOutput').textContent.trim();
+      if(!text){ setStatus('Nothing to copy yet. Generate output first.'); return; }
+      try{
+        await navigator.clipboard.writeText(text);
+        setStatus('Output copied. Nice and easy.');
+      }catch(err){
+        setStatus('Copy failed in this browser. Use download instead.');
+      }
+    }
+
+    function downloadOutput(){
+      const text = document.getElementById('finalOutput').textContent.trim();
+      if(!text){ setStatus('Nothing to download yet. Generate output first.'); return; }
+      const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safe = (els.insertTitle.value || 'planner-insert-output').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      a.href = url;
+      a.download = safe + '.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus('Text file downloaded.');
+    }
+
+    function setStatus(msg){ document.getElementById('statusLine').textContent = msg; }
+    function scrollToId(id){ document.getElementById(id).scrollIntoView({behavior:'smooth', block:'start'}); }
+
+    document.getElementById('quickStartFill').addEventListener('click', quickStart);
+    document.getElementById('randomizeBtn').addEventListener('click', randomize);
+    document.getElementById('clearBtn').addEventListener('click', ()=>clearAll(true));
+    document.getElementById('generateBtn').addEventListener('click', generateOutput);
+    document.getElementById('copyBtn').addEventListener('click', copyOutput);
+    document.getElementById('downloadBtn').addEventListener('click', downloadOutput);
+    document.getElementById('returnHomeBtn').addEventListener('click', ()=>scrollToId('home'));
+    document.getElementById('goStartTop').addEventListener('click', ()=>scrollToId('startScreen'));
+    document.getElementById('goBuilderTop').addEventListener('click', ()=>scrollToId('builder'));
+    document.getElementById('goOutputTop').addEventListener('click', ()=>scrollToId('outputSection'));
+    document.getElementById('launchBuilder').addEventListener('click', ()=>scrollToId('builder'));
+    document.getElementById('jumpPresets').addEventListener('click', ()=>scrollToId('presetSection'));
+    document.getElementById('jumpInspiration').addEventListener('click', ()=>scrollToId('inspirationSection'));
+    document.getElementById('startQuick').addEventListener('click', quickStart);
+    document.getElementById('startCustom').addEventListener('click', ()=>scrollToId('builder'));
+    document.getElementById('startPresetMode').addEventListener('click', ()=>scrollToId('presetSection'));
+
+    document.querySelectorAll('.tab').forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = document.getElementById(tab.dataset.open);
+        if(target){ target.open = true; target.scrollIntoView({behavior:'smooth', block:'nearest'}); }
+      });
+    });
+
+    buildPresetCards();
+    buildInspirationCards();
+    clearAll(false);
+    updateLivePreview();
+    setStatus('Ready. Pick a preset, get inspired, or build from scratch.');
+  </script>
+</body>
+</html>
